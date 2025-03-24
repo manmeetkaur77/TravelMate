@@ -1,111 +1,113 @@
-const fs = require('fs');
-const { json } = require('stream/consumers');
-const path = "/Users/manmeetkaur/Desktop/Big Folder/TravelMate/dev-data/data/tours-simple.json";
-
-const tours = JSON.parse(fs.readFileSync(path, 'utf-8'));
-
-// Middleware to check if tour ID is valid
-exports.checkID = (req, res, next,val) => {
-    console.log(`${val}`)
-    if (req.params.id * 1 > tours.length) {
-        return res.status(404).json({
-            status: "fail",
-            message: "Tour not found"
-        });
-    }
-    next();
-};
-exports.postmiddleware=(req,res,next)=>{
-    const body=(req.body);
-    if(!req.body.name || !req.body.price){
-        res.status(402).json({
-            message:"YOU ARE NOT ALLOWED TO SEND"
-        })
-    }
-    next();
-}
+const Tours = require("../Models/toursmodel.js");
 
 // Get all tours
-exports.getTours = (req, res) => {
-    res.status(200).json({
-        status: "success",
-        results: tours.length,
-        data: { tours }
-    });
+exports.getAllTours = async (req, res) => {
+    try {
+        const tours = await Tours.find();
+        res.status(200).json({
+            status: "success",
+            results: tours.length,
+            data: { tours }
+        });
+    } catch (err) {
+        console.error("Error fetching tours:", err.message);
+        res.status(500).json({
+            status: "fail",
+            message: "Server error"
+        });
+    }
 };
 
 // Get a single tour by ID
-exports.getTour= (req, res) => {
-    const id=req.params.id*1;
-    const tour = tours.find(el => el.id === id);
-    res.status(200).json({
-        status: "success",
-        data: { tour }
-    });
+exports.getTour = async (req, res) => {
+    try {
+        const tour = await Tours.findById(req.params.id);
+        if (!tour) {
+            return res.status(404).json({
+                status: "fail",
+                message: "Tour not found"
+            });
+        }
+        res.status(200).json({
+            status: "success",
+            data: { tour }
+        });
+    } catch (err) {
+        console.error("Error fetching tour:", err.message);
+        res.status(500).json({
+            status: "fail",
+            message: "Server error"
+        });
+    }
 };
 
 // Create a new tour
-exports.postTour = (req, res) => {
-    console.log("for post")
-    console.log(req.body);
-    const newId = tours[tours.length - 1].id + 1;
-    const newTour = Object.assign({ id: newId }, req.body);
-  
-    tours.push(newTour);
-  
-    fs.writeFile(
-      path,
-      JSON.stringify(tours),
-      err => {
+exports.createTour = async (req, res) => {
+    try {
+        const newTour = await Tours.create(req.body);
         res.status(201).json({
-          status: 'success',
-          data: {
-            tour: newTour
-          }
+            status: "success",
+            data: { tour: newTour }
         });
-      }
-    );
-  };
-
-// Update a tour
-exports.patchTour = (req, res) => {
-    const id = req.params.id * 1;
-    const tour = tours.find(el => el.id === id);
-
-    if (!tour) {
-        return res.status(404).json({
+    } catch (err) {
+        console.error("Error creating tour:", err.message);
+        res.status(422).json({
             status: "fail",
-            message: "Tour not found"
+            message: err.message || "Invalid data"
         });
     }
+};
 
-    Object.assign(tour, req.body);
-    fs.writeFileSync(path, JSON.stringify(tours, null, 2), "utf-8");
+// Update a tour
+exports.updateTour = async (req, res) => {
+    try {
+        const tour = await Tours.findByIdAndUpdate(req.params.id, req.body, {
+            new: true,
+            runValidators: true
+        });
 
-    res.status(200).json({
-        status: "success",
-        data: { tour }
-    });
+        if (!tour) {
+            return res.status(404).json({
+                status: "fail",
+                message: "Tour not found"
+            });
+        }
+
+        res.status(200).json({
+            status: "success",
+            data: { tour }
+        });
+    } catch (err) {
+        console.error("Error updating tour:", err.message);
+        res.status(422).json({
+            status: "fail",
+            message: err.message || "Invalid update request"
+        });
+    }
 };
 
 // Delete a tour
-exports.deleteTour = (req, res) => {
-    const id = req.params.id * 1;
-    const index = tours.findIndex(el => el.id === id);
+exports.deleteTour = async (req, res) => {
+    try {
+        const tour = await Tours.findByIdAndDelete(req.params.id); // Correct method
 
-    if (index === -1) {
-        return res.status(404).json({
+        if (!tour) {
+            return res.status(404).json({
+                status: "fail",
+                message: "Tour not found"
+            });
+        }
+
+        res.status(204).json({
+            status: "success",
+            message: "Tour deleted successfully"
+        });
+
+    } catch (err) {
+        console.error("Error deleting tour:", err.message);
+        res.status(500).json({
             status: "fail",
-            message: "Tour not found"
+            message: "Server error"
         });
     }
-
-    tours.splice(index, 1);
-    fs.writeFileSync(path, JSON.stringify(tours, null, 2), "utf-8");
-
-    res.status(204).json({
-        status: "success",
-        data: null
-    });
 };
-
