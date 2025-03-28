@@ -1,3 +1,4 @@
+const authController=require("./authController.js")
 
 
 exports. getAllUsers=(req,res)=>{
@@ -7,6 +8,7 @@ exports. getAllUsers=(req,res)=>{
 }
 exports. getUsers=(req,res)=>{
     res.send("hi")
+    console.log("hi")
 }
 exports. delAllUsers=(req,res)=>{
     res.send("hi")
